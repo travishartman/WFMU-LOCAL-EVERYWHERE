@@ -1,0 +1,17 @@
+<!--
+  Example icecast2 <relay> stanza to mirror WFMU's live stream onto the Pi.
+  Merge this into /etc/icecast2/icecast.xml under <icecast>, alongside the
+  existing <limits>/<authentication>/etc sections (do not replace the whole file).
+
+  This makes the Pi pull WFMU's stream once and re-serve it to any local
+  device at http://<pi>:8000/wfmu.mp3 - useful regardless of which
+  transmission method (FM, Bluetooth, line-out player, etc.) reads from it
+  later, since that part still needs to consume audio from *somewhere*.
+-->
+<relay>
+  <server>stream0.wfmu.org</server>
+  <port>80</port>
+  <mount>/freeform-128k</mount>
+  <local-mount>/wfmu.mp3</local-mount>
+  <relay-shoutcast-metadata>0</relay-shoutcast-metadata>
+</relay>
