@@ -38,11 +38,12 @@ if command -v alsactl >/dev/null 2>&1; then
 fi
 
 # Login banner: print on-air status on every SSH login via dynamic MOTD.
+# Run via `sh` so it works even if wfmu-status.sh lost its executable bit.
 echo "Installing login status banner (MOTD) ..."
-chmod +x "$HERE/wfmu-status.sh"
+chmod +x "$HERE/wfmu-status.sh" 2>/dev/null || true
 sudo tee /etc/update-motd.d/99-wfmu >/dev/null <<EOF
 #!/bin/sh
-exec "$HERE/wfmu-status.sh"
+exec sh "$HERE/wfmu-status.sh"
 EOF
 sudo chmod +x /etc/update-motd.d/99-wfmu
 

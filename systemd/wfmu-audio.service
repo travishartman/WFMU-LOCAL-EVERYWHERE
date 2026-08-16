@@ -5,7 +5,13 @@ Description=WFMU audio: Icecast relay -> USB DAC -> SI4713 line input
 # not block or cancel audio startup. (A 9-min si4713 hang once caused this unit's
 # queued boot job to be cancelled -> no audio.) Restart=always covers the Icecast
 # relay not being up yet at boot, and a dropped stream later.
-After=sound.target
+#
+# Start after the Icecast relay so audio connects on the first try instead of
+# retrying. If your relay uses a different unit name than icecast2.service, edit
+# the two lines below. Restart=always still covers the window where the relay is
+# up but the wfmu.mp3 mount isn't populated yet (source client still connecting).
+After=sound.target icecast2.service
+Wants=icecast2.service
 
 [Service]
 User=travis
