@@ -1,0 +1,17 @@
+[Unit]
+Description=WFMU audio: Icecast relay -> USB DAC -> SI4713 line input
+# Carrier should be tuned first; audio path is independent but ordering is tidy.
+After=si4713.service sound.target network-online.target
+Wants=si4713.service network-online.target
+
+[Service]
+User=travis
+WorkingDirectory=/home/travis/WFMU-LOCAL-EVERYWHERE
+# hw:1,0 = KT USB Audio DAC. If aplay -l shows a different card number, update it here.
+ExecStart=/home/travis/WFMU-LOCAL-EVERYWHERE/play_usb_dac.sh http://localhost:8000/wfmu.mp3 hw:1,0
+# Keep retrying: covers the Icecast relay not being up yet at boot, or a dropped stream.
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

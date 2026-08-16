@@ -1,0 +1,21 @@
+[Unit]
+Description=SI4713 FM transmitter bring-up (tune carrier + RDS on 91.1 MHz)
+# I2C bus and USB must be ready; the chip itself only needs I2C.
+After=multi-user.target
+Wants=multi-user.target
+
+[Service]
+Type=oneshot
+User=travis
+WorkingDirectory=/home/travis/WFMU-LOCAL-EVERYWHERE
+# si4713_bringup.sh drives the RST line itself and retries once on the reset-pulse race.
+ExecStart=/home/travis/WFMU-LOCAL-EVERYWHERE/si4713_bringup.sh 91.1 WFMU "WFMU live"
+RemainAfterExit=yes
+# If the very first boot attempt still loses the reset race, let systemd retry.
+Restart=on-failure
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Install]
+WantedBy=multi-user.target
