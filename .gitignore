@@ -1,3 +1,7 @@
 __pycache__/
 *.pyc
 .venv/
+
+# SD-card backup images are large — keep them off git (see recovery/README.md)
+*.img
+*.img.gz

@@ -7,7 +7,7 @@ set -eu
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 cd "$SCRIPT_DIR"
 
-APT_PACKAGES="python3-venv i2c-tools libgpiod-dev python3-libgpiod python3-rpi.gpio python3-lgpio mpg123"
+APT_PACKAGES="python3-venv i2c-tools libgpiod-dev python3-libgpiod python3-rpi.gpio python3-lgpio mpg123 alsa-utils"
 
 echo "Installing Raspberry Pi OS dependencies..."
 sudo apt-get update

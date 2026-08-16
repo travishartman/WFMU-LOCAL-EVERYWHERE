@@ -1,8 +1,11 @@
 [Unit]
 Description=WFMU audio: Icecast relay -> USB DAC -> SI4713 line input
-# Carrier should be tuned first; audio path is independent but ordering is tidy.
-After=si4713.service sound.target network-online.target
-Wants=si4713.service network-online.target
+# Deliberately INDEPENDENT of si4713.service. The audio path (USB DAC) and the
+# I2C tuning are separate hardware paths, so a slow or hung si4713 bring-up must
+# not block or cancel audio startup. (A 9-min si4713 hang once caused this unit's
+# queued boot job to be cancelled -> no audio.) Restart=always covers the Icecast
+# relay not being up yet at boot, and a dropped stream later.
+After=sound.target
 
 [Service]
 User=travis
