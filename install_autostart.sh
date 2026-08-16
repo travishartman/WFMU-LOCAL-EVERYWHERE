@@ -37,15 +37,33 @@ if command -v alsactl >/dev/null 2>&1; then
   sudo alsactl store || true
 fi
 
-# Login banner: print on-air status on every SSH login via dynamic MOTD.
+# Login banner: print on-air status on every SSH login.
+# Two delivery paths for robustness:
+#   1. dynamic MOTD (/etc/update-motd.d) — works on images with pam_motd wired up
+#   2. ~/.bashrc source line — the reliable fallback on Raspberry Pi OS Lite, whose
+#      login PAM stack often shows only the static /etc/motd and never runs update-motd.d
 # Run via `sh` so it works even if wfmu-status.sh lost its executable bit.
-echo "Installing login status banner (MOTD) ..."
+echo "Installing login status banner ..."
 chmod +x "$HERE/wfmu-status.sh" 2>/dev/null || true
 sudo tee /etc/update-motd.d/99-wfmu >/dev/null <<EOF
 #!/bin/sh
 exec sh "$HERE/wfmu-status.sh"
 EOF
 sudo chmod +x /etc/update-motd.d/99-wfmu
+
+BASHRC="$HOME/.bashrc"
+MARKER="# >>> wfmu status banner >>>"
+if ! grep -qF "$MARKER" "$BASHRC" 2>/dev/null; then
+  {
+    echo ""
+    echo "$MARKER"
+    echo "case \$- in *i*) sh \"$HERE/wfmu-status.sh\" ;; esac"
+    echo "# <<< wfmu status banner <<<"
+  } >>"$BASHRC"
+  echo "Added on-air banner to $BASHRC (shows on every interactive login)."
+else
+  echo "On-air banner already present in $BASHRC."
+fi
 
 cat <<'EOF'
 
