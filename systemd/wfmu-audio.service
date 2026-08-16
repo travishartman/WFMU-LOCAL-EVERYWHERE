@@ -10,8 +10,9 @@ After=sound.target
 [Service]
 User=travis
 WorkingDirectory=/home/travis/WFMU-LOCAL-EVERYWHERE
-# hw:1,0 = KT USB Audio DAC. If aplay -l shows a different card number, update it here.
-ExecStart=/home/travis/WFMU-LOCAL-EVERYWHERE/play_usb_dac.sh http://localhost:8000/wfmu.mp3 hw:1,0
+# "auto" makes play_usb_dac.sh find the USB DAC by name (in /proc/asound/cards)
+# and set its volume to 100%, so a card-number shuffle on boot can't break audio.
+ExecStart=/home/travis/WFMU-LOCAL-EVERYWHERE/play_usb_dac.sh http://localhost:8000/wfmu.mp3 auto
 # Keep retrying: covers the Icecast relay not being up yet at boot, or a dropped stream.
 Restart=always
 RestartSec=5

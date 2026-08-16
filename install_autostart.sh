@@ -37,18 +37,25 @@ if command -v alsactl >/dev/null 2>&1; then
   sudo alsactl store || true
 fi
 
+# Login banner: print on-air status on every SSH login via dynamic MOTD.
+echo "Installing login status banner (MOTD) ..."
+chmod +x "$HERE/wfmu-status.sh"
+sudo tee /etc/update-motd.d/99-wfmu >/dev/null <<EOF
+#!/bin/sh
+exec "$HERE/wfmu-status.sh"
+EOF
+sudo chmod +x /etc/update-motd.d/99-wfmu
+
 cat <<'EOF'
 
 Done. The radio will come up on 91.1 MHz automatically after every reboot.
+Every time you SSH in, a banner shows whether it's ON AIR.
 
 Start now without rebooting:
   sudo systemctl start si4713.service wfmu-audio.service
 
-Check status / logs:
+See status any time:
+  ./wfmu-status.sh
   systemctl status si4713.service wfmu-audio.service
   journalctl -u si4713.service -u wfmu-audio.service -b
-
-Reminder: if 'aplay -l' ever shows the USB DAC on a card other than 1, edit the
-hw:1,0 argument in /etc/systemd/system/wfmu-audio.service, then:
-  sudo systemctl daemon-reload && sudo systemctl restart wfmu-audio.service
 EOF
