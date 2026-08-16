@@ -47,35 +47,48 @@ def main() -> int:
     i2c = busio.I2C(board.SCL, board.SDA)
     reset = digitalio.DigitalInOut(reset_pin)
 
+    # First attempt can miss the reset-pulse race; retry once like si4713_bringup.sh.
+    attempts = 2
+    last_exc: Exception | None = None
     try:
-        # Constructing the library object drives RST and powers the chip up.
-        adafruit_si4713.SI4713(i2c, reset=reset)
+        for attempt in range(1, attempts + 1):
+            try:
+                # Constructing the library object drives RST and powers the chip up.
+                adafruit_si4713.SI4713(i2c, reset=reset)
 
-        while not i2c.try_lock():
-            time.sleep(0.01)
-        try:
-            i2c.writeto(_ADDR, bytes([_GET_REV]))
-            time.sleep(0.01)
-            resp = bytearray(9)
-            i2c.readfrom_into(_ADDR, resp)
-        finally:
-            i2c.unlock()
+                while not i2c.try_lock():
+                    time.sleep(0.01)
+                try:
+                    i2c.writeto(_ADDR, bytes([_GET_REV]))
+                    time.sleep(0.01)
+                    resp = bytearray(9)
+                    i2c.readfrom_into(_ADDR, resp)
+                finally:
+                    i2c.unlock()
 
-        part_number = resp[1]
-        fw_major = resp[2]
-        fw_minor = resp[3]
-        chip_rev = resp[8]
+                part_number = resp[1]
+                fw_major = resp[2]
+                fw_minor = resp[3]
+                chip_rev = resp[8]
 
-        print(f"Part number: {part_number}  (expect 13 for SI4713)")
-        print(f"Firmware:    {fw_major}.{fw_minor}")
-        print(f"Chip rev:    {chip_rev}")
-        if part_number == 13:
-            print("=> Confirmed: this is an SI4713.")
-            return 0
-        print("=> WARNING: part number is not 13 — not the expected SI4713.")
-        return 2
-    except Exception as exc:  # pragma: no cover - hardware dependent
-        print(f"Failed to read SI4713 revision: {exc}", file=sys.stderr)
+                print(f"Part number: {part_number}  (expect 13 for SI4713)")
+                print(f"Firmware:    {fw_major}.{fw_minor}")
+                print(f"Chip rev:    {chip_rev}")
+                if part_number == 13:
+                    print("=> Confirmed: this is an SI4713.")
+                    return 0
+                print("=> WARNING: part number is not 13 — not the expected SI4713.")
+                return 2
+            except Exception as exc:  # pragma: no cover - hardware dependent
+                last_exc = exc
+                if attempt < attempts:
+                    print(
+                        f"Attempt {attempt} failed ({exc}); retrying after reset...",
+                        file=sys.stderr,
+                    )
+                    time.sleep(0.2)
+
+        print(f"Failed to read SI4713 revision: {last_exc}", file=sys.stderr)
         return 1
     finally:
         reset.deinit()
