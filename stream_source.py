@@ -10,7 +10,9 @@ PLAYLISTS = {
     "mp3": "http://wfmu.org/wfmu_mp3.pls",
     "aac": "http://wfmu.org/wfmu_aac.pls",
     "dialup": "http://wfmu.org/wfmu32.pls",
+    "rock": "http://wfmu.org/wfmu_rock.pls",
     "drummer": "http://wfmu.org/wfmu_drummer.pls",
+    "sheena": "http://wfmu.org/wfmu_sheena.pls",
 }
 
 

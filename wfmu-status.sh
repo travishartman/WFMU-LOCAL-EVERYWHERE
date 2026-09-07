@@ -19,6 +19,9 @@ fi
 
 tx="$(systemctl is-active si4713.service 2>/dev/null || echo unknown)"
 au="$(systemctl is-active wfmu-audio.service 2>/dev/null || echo unknown)"
+sp="$(systemctl is-active librespot-wfmu.service 2>/dev/null || echo unknown)"
+stream_url="$(sed -n 's/^STREAM_URL=//p' /etc/default/wfmu-audio 2>/dev/null || true)"
+[ -z "${stream_url:-}" ] && stream_url="http://localhost:8000/wfmu.mp3"
 
 # Only draw the art if the window is wide enough (it's ~85 cols); otherwise it
 # wraps and looks sheared, so suppress it and just show the status line.
@@ -57,14 +60,21 @@ ART
 fi
 
 echo
-if [ "$tx" = active ] && [ "$au" = active ]; then
+if [ "$tx" = active ] && { [ "$au" = active ] || [ "$sp" = active ]; }; then
   echo "  ON AIR — $station broadcasting on $freq MHz"
 else
   echo "  OFF AIR — $station is NOT fully broadcasting on $freq MHz"
 fi
 echo "    transmitter (si4713.service):     $tx"
 echo "    audio       (wfmu-audio.service): $au"
-if [ "$tx" != active ] || [ "$au" != active ]; then
-  echo "    diagnose: journalctl -u si4713.service -u wfmu-audio.service -b"
+echo "    spotify     (librespot-wfmu.service): $sp"
+if [ "$sp" = active ]; then
+  echo "    source mode: spotify connect"
+else
+  echo "    source mode: stream URL"
+  echo "    stream URL:  $stream_url"
+fi
+if [ "$tx" != active ] || { [ "$au" != active ] && [ "$sp" != active ]; }; then
+  echo "    diagnose: journalctl -u si4713.service -u wfmu-audio.service -u librespot-wfmu.service -b"
 fi
 echo

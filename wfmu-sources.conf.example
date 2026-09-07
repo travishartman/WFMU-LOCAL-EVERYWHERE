@@ -1,0 +1,15 @@
+# Source map for switch_source.sh (keys 1-4).
+#
+# Defaults below keep the architecture consistent with the current setup:
+# local Icecast mounts on localhost.
+
+KEY1_URL=http://localhost:8000/wfmu.mp3
+KEY2_URL=http://localhost:8000/rocknsoul.mp3
+KEY3_URL=http://localhost:8000/drummer.mp3
+KEY4_URL=http://localhost:8000/sheena.mp3
+
+# If you have not added relay mounts for 2-4 yet, temporary direct stream
+# alternatives are:
+# KEY2_URL=http://stream0.wfmu.org/rocknsoul
+# KEY3_URL=http://stream0.wfmu.org/drummer
+# KEY4_URL=http://stream0.wfmu.org/sheena

@@ -1,17 +1,44 @@
 <!--
-  Example icecast2 <relay> stanza to mirror WFMU's live stream onto the Pi.
-  Merge this into /etc/icecast2/icecast.xml under <icecast>, alongside the
+  Example icecast2 <relay> stanzas for all four WFMU channels.
+  Merge these into /etc/icecast2/icecast.xml under <icecast>, alongside the
   existing <limits>/<authentication>/etc sections (do not replace the whole file).
 
-  This makes the Pi pull WFMU's stream once and re-serve it to any local
-  device at http://<pi>:8000/wfmu.mp3 - useful regardless of which
-  transmission method (FM, Bluetooth, line-out player, etc.) reads from it
-  later, since that part still needs to consume audio from *somewhere*.
+  Local mounts are used by switch_source.sh so key-driven switching stays on the
+  same localhost Icecast pattern as the current main-stream setup.
 -->
+
+<!-- Key 1: WFMU live -->
 <relay>
   <server>stream0.wfmu.org</server>
   <port>80</port>
   <mount>/freeform-128k</mount>
   <local-mount>/wfmu.mp3</local-mount>
+  <relay-shoutcast-metadata>0</relay-shoutcast-metadata>
+</relay>
+
+<!-- Key 2: Rock'n'Soul Radio -->
+<relay>
+  <server>stream0.wfmu.org</server>
+  <port>80</port>
+  <mount>/rocknsoul</mount>
+  <local-mount>/rocknsoul.mp3</local-mount>
+  <relay-shoutcast-metadata>0</relay-shoutcast-metadata>
+</relay>
+
+<!-- Key 3: Give the Drummer Radio -->
+<relay>
+  <server>stream0.wfmu.org</server>
+  <port>80</port>
+  <mount>/drummer</mount>
+  <local-mount>/drummer.mp3</local-mount>
+  <relay-shoutcast-metadata>0</relay-shoutcast-metadata>
+</relay>
+
+<!-- Key 4: Sheena's Jungle Room -->
+<relay>
+  <server>stream0.wfmu.org</server>
+  <port>80</port>
+  <mount>/sheena</mount>
+  <local-mount>/sheena.mp3</local-mount>
   <relay-shoutcast-metadata>0</relay-shoutcast-metadata>
 </relay>

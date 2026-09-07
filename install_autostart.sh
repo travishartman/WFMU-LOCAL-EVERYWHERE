@@ -16,7 +16,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC="$HERE/systemd"
 
-for unit in si4713.service wfmu-audio.service; do
+for unit in si4713.service wfmu-audio.service librespot-wfmu.service; do
   if [ ! -f "$SRC/$unit" ]; then
     echo "Error: $SRC/$unit not found — did you git pull?" >&2
     exit 1
@@ -26,10 +26,28 @@ done
 echo "Installing unit files to /etc/systemd/system ..."
 sudo install -m 0644 "$SRC/si4713.service" /etc/systemd/system/si4713.service
 sudo install -m 0644 "$SRC/wfmu-audio.service" /etc/systemd/system/wfmu-audio.service
+sudo install -m 0644 "$SRC/librespot-wfmu.service" /etc/systemd/system/librespot-wfmu.service
+
+echo "Installing helper scripts ..."
+sudo install -m 0755 "$HERE/switch_source.sh" /usr/local/bin/wfmu-switch-source
+sudo install -m 0755 "$HERE/radio_hotkeys.sh" /usr/local/bin/wfmu-radio-hotkeys
+sudo install -m 0755 "$HERE/start_librespot.sh" /usr/local/bin/wfmu-start-librespot
+
+echo "Seeding runtime config files (preserving existing local edits) ..."
+if [ ! -f /etc/default/wfmu-audio ]; then
+  echo "STREAM_URL=http://localhost:8000/wfmu.mp3" | sudo tee /etc/default/wfmu-audio >/dev/null
+fi
+if [ ! -f /etc/default/wfmu-sources ]; then
+  sudo install -m 0644 "$HERE/wfmu-sources.conf.example" /etc/default/wfmu-sources
+fi
+if [ ! -f /etc/default/librespot-wfmu ]; then
+  sudo install -m 0644 "$HERE/librespot-wfmu.env.example" /etc/default/librespot-wfmu
+fi
 
 echo "Reloading systemd and enabling services on boot ..."
 sudo systemctl daemon-reload
 sudo systemctl enable si4713.service wfmu-audio.service
+sudo systemctl disable librespot-wfmu.service >/dev/null 2>&1 || true
 
 # Persist the DAC Headphone volume (must be ~100) so audio survives reboots.
 if command -v alsactl >/dev/null 2>&1; then
@@ -69,6 +87,10 @@ cat <<'EOF'
 
 Done. The radio will come up on 91.1 MHz automatically after every reboot.
 Every time you SSH in, a banner shows whether it's ON AIR.
+
+Terminal-only hotkeys (active only while running in that SSH terminal):
+  sudo wfmu-radio-hotkeys
+  # 1=live, 2=rocknsoul, 3=drummer, 4=sheena, 5=spotify, q=quit
 
 Start now without rebooting:
   sudo systemctl start si4713.service wfmu-audio.service

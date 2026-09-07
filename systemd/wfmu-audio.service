@@ -16,9 +16,13 @@ Wants=icecast2.service
 [Service]
 User=travis
 WorkingDirectory=/home/travis/WFMU-LOCAL-EVERYWHERE
+# Runtime source selection. install_autostart.sh seeds /etc/default/wfmu-audio
+# with STREAM_URL=http://localhost:8000/wfmu.mp3 so boot behavior stays the same.
+EnvironmentFile=-/etc/default/wfmu-audio
+Environment="STREAM_URL=http://localhost:8000/wfmu.mp3"
 # "auto" makes play_usb_dac.sh find the USB DAC by name (in /proc/asound/cards)
 # and set its volume to 100%, so a card-number shuffle on boot can't break audio.
-ExecStart=/home/travis/WFMU-LOCAL-EVERYWHERE/play_usb_dac.sh http://localhost:8000/wfmu.mp3 auto
+ExecStart=/home/travis/WFMU-LOCAL-EVERYWHERE/play_usb_dac.sh ${STREAM_URL} auto
 # Keep retrying: covers the Icecast relay not being up yet at boot, or a dropped stream.
 Restart=always
 RestartSec=5
