@@ -4,11 +4,10 @@ set -euo pipefail
 # Terminal-only source control. Keys only work while this script is running
 # in the focused terminal/SSH session.
 
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SWITCHER="$HERE/switch_source.sh"
+SWITCHER="$(command -v wfmu-switch-source || true)"
 
-if [[ ! -f "$SWITCHER" ]]; then
-  echo "Missing switch helper: $SWITCHER" >&2
+if [[ -z "$SWITCHER" ]]; then
+  echo "Missing switch helper: wfmu-switch-source (not on PATH — did you run install_autostart.sh?)" >&2
   exit 1
 fi
 
