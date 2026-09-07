@@ -41,7 +41,12 @@ if [ ! -f /etc/default/wfmu-sources ]; then
   sudo install -m 0644 "$HERE/wfmu-sources.conf.example" /etc/default/wfmu-sources
 fi
 if [ ! -f /etc/default/librespot-wfmu ]; then
-  sudo install -m 0644 "$HERE/librespot-wfmu.env.example" /etc/default/librespot-wfmu
+  sudo tee /etc/default/librespot-wfmu >/dev/null <<'EOF'
+LIBRESPOT_NAME="WFMU Pi"
+LIBRESPOT_DEVICE=auto
+LIBRESPOT_BITRATE=320
+LIBRESPOT_INITIAL_VOLUME=100
+EOF
 fi
 
 echo "Reloading systemd and enabling services on boot ..."

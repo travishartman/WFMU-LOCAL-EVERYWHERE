@@ -39,11 +39,6 @@ if [[ -r "$SOURCE_ENV" ]]; then
   . "$SOURCE_ENV"
 fi
 
-if [[ -r "$SPOTIFY_ENV" ]]; then
-  # shellcheck disable=SC1090
-  . "$SPOTIFY_ENV"
-fi
-
 write_audio_env() {
   local stream_url="$1"
   umask 022
@@ -55,7 +50,11 @@ EOF
 preflight_local_mount() {
   local stream_url="$1"
   if [[ "$stream_url" == http://localhost:* || "$stream_url" == http://127.0.0.1:* ]]; then
-    curl -fsS --max-time 5 -I "$stream_url" >/dev/null
+    # Icecast streams continuously and rejects HEAD, so grab the status code from
+    # a short GET. A timeout after a 200 still means the mount is live.
+    local code
+    code="$(curl -s -o /dev/null -m 3 -w '%{http_code}' "$stream_url" || true)"
+    [[ "$code" == "200" || "$code" == "206" ]]
   fi
 }
 
