@@ -40,7 +40,7 @@ fi
 # The USB DAC's volume control resets low (~30 = near-silent) and alsactl doesn't
 # reliably restore it on boot, so set it here every time audio starts.
 # Level is overridable: HEADPHONE_LEVEL=90% ./play_usb_dac.sh ...
-headphone_level="${HEADPHONE_LEVEL:-100%}"
+headphone_level="${HEADPHONE_LEVEL:-75%}"
 case "$alsa_device" in
   hw:*)
     card="$(printf '%s' "$alsa_device" | sed 's/^hw:\([0-9][0-9]*\).*/\1/')"
