@@ -82,6 +82,16 @@ sudo wfmu-switch-source 5
 sudo wfmu-switch-source status
 ```
 
+Or use the short channel commands from anywhere (they auto-elevate):
+
+```bash
+wfmu1   # WFMU live
+wfmu2   # Rock'n'Soul Radio
+wfmu3   # Give the Drummer Radio
+wfmu4   # Sheena's Jungle Room Radio
+wfmu5   # Spotify
+```
+
 ---
 
 ## Icecast relay mounts for keys 1-4
@@ -145,12 +155,7 @@ If Spotify service fails, switching logic falls back to key `1`.
    backends, etc.), recreates the `.venv` with `--system-site-packages`, and
    installs `adafruit-blinka` + `adafruit-circuitpython-si4713`.
 
-3. **Smoke-test Blinka** before wiring the SI4713:
-   ```bash
-   .venv/bin/python blinka_smoketest.py
-   ```
-
-4. **Install autostart** (systemd units + login banner):
+3. **Install autostart** (systemd units + login banner):
    ```bash
    bash install_autostart.sh
    ```
@@ -288,9 +293,6 @@ git commit -m "Mark scripts executable" && git push
 | `git pull` blocked by "local changes would be overwritten" | `chmod +x` on the Pi created a mode-change diff. | `git checkout -- <file>` then `git pull`; or set the exec bit in git from the Mac (see above). |
 | Commit/push fails on the Pi | gpg signing prompts can't be answered non-interactively. | Commit and push from the Mac only; the Pi pulls. |
 
-`si4713_getrev.py` (a GET_REV identity probe) proved unreliable and is **not** part
-of the working flow — don't revive it. Use `si4713_bringup.sh` for bring-up.
-
 > Do **not** run `pinctrl set 5 op dh` before `si4713_bringup.sh`. The Adafruit
 > library drives the RST line (GPIO5) itself; a manual override causes
 > "Timeout waiting for SI4713 to respond". Use `pinctrl` only to confirm wiring via
@@ -322,7 +324,6 @@ diskutil list
 The repo includes the scripts the hardware plan calls for:
 
 - `./setup_si4713_env.sh` — install packages, (re)create the venv, install Python deps.
-- `.venv/bin/python blinka_smoketest.py` — verify Blinka, digital I/O, and I2C before wiring.
 - `.venv/bin/python si4713_control.py 91.1 --station WFMU --radio-text "WFMU live"` —
   configure frequency, power, and RDS over I2C.
 - `./si4713_bringup.sh [FREQ] [STATION] [RADIO_TEXT]` — boot-time bring-up with one

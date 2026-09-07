@@ -33,6 +33,14 @@ sudo install -m 0755 "$HERE/switch_source.sh" /usr/local/bin/wfmu-switch-source
 sudo install -m 0755 "$HERE/radio_hotkeys.sh" /usr/local/bin/wfmu-radio-hotkeys
 sudo install -m 0755 "$HERE/start_librespot.sh" /usr/local/bin/wfmu-start-librespot
 
+# Short global commands: wfmu1..wfmu5 -> wfmu-switch-source 1..5
+echo "Installing wfmu1..wfmu5 shortcut commands ..."
+for n in 1 2 3 4 5; do
+  printf '#!/bin/sh\nexec wfmu-switch-source %s "$@"\n' "$n" \
+    | sudo tee "/usr/local/bin/wfmu$n" >/dev/null
+  sudo chmod 0755 "/usr/local/bin/wfmu$n"
+done
+
 echo "Seeding runtime config files (preserving existing local edits) ..."
 if [ ! -f /etc/default/wfmu-audio ]; then
   echo "STREAM_URL=http://localhost:8000/wfmu.mp3" | sudo tee /etc/default/wfmu-audio >/dev/null
@@ -96,6 +104,13 @@ Every time you SSH in, a banner shows whether it's ON AIR.
 Terminal-only hotkeys (active only while running in that SSH terminal):
   sudo wfmu-radio-hotkeys
   # 1=live, 2=rocknsoul, 3=drummer, 4=sheena, 5=spotify, q=quit
+
+Quick channel commands (run from anywhere):
+  wfmu1  # WFMU live
+  wfmu2  # Rock'n'Soul
+  wfmu3  # Give the Drummer
+  wfmu4  # Sheena's Jungle Room
+  wfmu5  # Spotify
 
 Start now without rebooting:
   sudo systemctl start si4713.service wfmu-audio.service
