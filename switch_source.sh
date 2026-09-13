@@ -5,8 +5,8 @@ set -euo pipefail
 #
 # Keys:
 #   1 -> WFMU live (main)
-#   2 -> Rock'n'Soul Radio
-#   3 -> Give the Drummer Radio
+#   2 -> Give the Drummer Radio
+#   3 -> Rock'n'Soul Radio
 #   4 -> Sheena's Jungle Room
 #   5 -> Spotify (librespot-wfmu.service)
 
@@ -28,8 +28,8 @@ SPOTIFY_ENV="/etc/default/librespot-wfmu"
 
 # Keep defaults consistent with current architecture: localhost relay mounts.
 KEY1_URL="http://localhost:8000/wfmu.mp3"
-KEY2_URL="http://localhost:8000/rocknsoul.mp3"
-KEY3_URL="http://localhost:8000/drummer.mp3"
+KEY2_URL="http://localhost:8000/drummer.mp3"
+KEY3_URL="http://localhost:8000/rocknsoul.mp3"
 KEY4_URL="http://localhost:8000/sheena.mp3"
 
 SPOTIFY_SERVICE="librespot-wfmu.service"
@@ -117,8 +117,8 @@ show_status() {
 
 case "$key" in
   1) switch_to_stream "WFMU live" "$KEY1_URL" ;;
-  2) switch_to_stream "Rock'n'Soul Radio" "$KEY2_URL" ;;
-  3) switch_to_stream "Give the Drummer Radio" "$KEY3_URL" ;;
+  2) switch_to_stream "Give the Drummer Radio" "$KEY2_URL" ;;
+  3) switch_to_stream "Rock'n'Soul Radio" "$KEY3_URL" ;;
   4) switch_to_stream "Sheena's Jungle Room" "$KEY4_URL" ;;
   5) switch_to_spotify ;;
   status|s|S) show_status ;;

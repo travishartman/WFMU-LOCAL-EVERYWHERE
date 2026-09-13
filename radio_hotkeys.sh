@@ -18,8 +18,8 @@ fi
 cat <<'EOF'
 Terminal hotkeys enabled (this window only):
   1 = WFMU live
-  2 = Rock'n'Soul Radio
-  3 = Give the Drummer Radio
+  2 = Give the Drummer Radio
+  3 = Rock'n'Soul Radio
   4 = Sheena's Jungle Room Radio
   5 = Spotify
 

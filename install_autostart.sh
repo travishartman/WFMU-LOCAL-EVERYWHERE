@@ -103,12 +103,12 @@ Every time you SSH in, a banner shows whether it's ON AIR.
 
 Terminal-only hotkeys (active only while running in that SSH terminal):
   sudo wfmu-radio-hotkeys
-  # 1=live, 2=rocknsoul, 3=drummer, 4=sheena, 5=spotify, q=quit
+  # 1=live, 2=drummer, 3=rocknsoul, 4=sheena, 5=spotify, q=quit
 
 Quick channel commands (run from anywhere):
   wfmu1  # WFMU live
-  wfmu2  # Rock'n'Soul
-  wfmu3  # Give the Drummer
+  wfmu2  # Give the Drummer
+  wfmu3  # Rock'n'Soul
   wfmu4  # Sheena's Jungle Room
   wfmu5  # Spotify
 

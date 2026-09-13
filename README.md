@@ -42,8 +42,8 @@ block or cancel audio, and vice versa. See "Resolved issues" for why this matter
 You can switch sources interactively from an SSH terminal on the Pi.
 
 - `1` = WFMU live stream
-- `2` = Rock'n'Soul Radio
-- `3` = Give the Drummer Radio
+- `2` = Give the Drummer Radio
+- `3` = Rock'n'Soul Radio
 - `4` = Sheena's Jungle Room Radio
 - `5` = Spotify (Pi-side librespot receiver)
 
@@ -86,8 +86,8 @@ Or use the short channel commands from anywhere (they auto-elevate):
 
 ```bash
 wfmu1   # WFMU live
-wfmu2   # Rock'n'Soul Radio
-wfmu3   # Give the Drummer Radio
+wfmu2   # Give the Drummer Radio
+wfmu3   # Rock'n'Soul Radio
 wfmu4   # Sheena's Jungle Room Radio
 wfmu5   # Spotify
 ```
