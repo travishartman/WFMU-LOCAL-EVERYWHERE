@@ -34,9 +34,19 @@ KEY4_URL="http://localhost:8000/sheena.mp3"
 
 SPOTIFY_SERVICE="librespot-wfmu.service"
 
+# Safely parse KEY*_URL from SOURCE_ENV without bash eval/sourcing risks
 if [[ -r "$SOURCE_ENV" ]]; then
-  # shellcheck disable=SC1090
-  . "$SOURCE_ENV"
+  while IFS='=' read -r raw_k raw_v || [[ -n "$raw_k" ]]; do
+    k="$(echo "$raw_k" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+    [[ "$k" =~ ^#.* || -z "$k" ]] && continue
+    v="$(echo "$raw_v" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^["'"'"']//' -e 's/["'"'"']$//')"
+    case "$k" in
+      KEY1_URL) KEY1_URL="$v" ;;
+      KEY2_URL) KEY2_URL="$v" ;;
+      KEY3_URL) KEY3_URL="$v" ;;
+      KEY4_URL) KEY4_URL="$v" ;;
+    esac
+  done < "$SOURCE_ENV"
 fi
 
 write_audio_env() {

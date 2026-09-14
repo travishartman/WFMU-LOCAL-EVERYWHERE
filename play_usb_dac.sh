@@ -61,8 +61,89 @@ case "$alsa_device" in
     ;;
 esac
 
-if [ "$alsa_device" = "default" ]; then
-  exec mpg123 "$stream_url"
-fi
+# Ordered fallback stream list:
+# 1. Requested stream (or key 1 default)
+# 2. Main WFMU local relay
+# 3. Direct WFMU upstream stream (if local icecast is down)
+# 4. Give the Drummer local relay (wfmu2)
+# 5. Direct Give the Drummer upstream stream
+# 6. Rock'n'Soul local relay (wfmu3)
+# 7. Direct Rock'n'Soul upstream stream
+# 8. Sheena's Jungle Room local relay (wfmu4)
+# 9. Direct Sheena upstream stream
 
-exec mpg123 -a "$alsa_device" "$stream_url"
+FALLBACK_STREAMS="
+http://localhost:8000/wfmu.mp3
+http://stream0.wfmu.org/freeform-128k
+http://localhost:8000/drummer.mp3
+http://stream0.wfmu.org/drummer
+http://localhost:8000/rocknsoul.mp3
+http://stream0.wfmu.org/rocknsoul
+http://localhost:8000/sheena.mp3
+http://stream0.wfmu.org/sheena
+"
+
+build_stream_list() {
+  local target="$1"
+  printf '%s\n' "$target"
+  for s in $FALLBACK_STREAMS; do
+    if [ "$s" != "$target" ]; then
+      printf '%s\n' "$s"
+    fi
+  done
+}
+
+# Run mpg123 with a retry-same-stream loop for transient hiccups.
+# If a stream crashes within MIN_PLAY_SECONDS repeatedly (MAX_HICCUP_RETRIES times),
+# it is considered dead and we rotate to the next fallback stream.
+MIN_PLAY_SECONDS=15
+MAX_HICCUP_RETRIES=3
+
+play_stream_with_resilience() {
+  local streams
+  streams="$(build_stream_list "$stream_url")"
+
+  while true; do
+    while IFS= read -r current_url; do
+      [ -z "$current_url" ] && continue
+      local hiccup_count=0
+
+      while [ "$hiccup_count" -lt "$MAX_HICCUP_RETRIES" ]; do
+        echo "Playing stream: $current_url (attempt $((hiccup_count + 1))/$MAX_HICCUP_RETRIES)" >&2
+        local start_time
+        start_time="$(date +%s)"
+
+        if [ "$alsa_device" = "default" ]; then
+          mpg123 "$current_url" || true
+        else
+          mpg123 -a "$alsa_device" "$current_url" || true
+        fi
+
+        local end_time elapsed
+        end_time="$(date +%s)"
+        elapsed=$((end_time - start_time))
+
+        if [ "$elapsed" -ge "$MIN_PLAY_SECONDS" ]; then
+          # Stream ran stably for a while; treat this as a normal disconnect / transient glitch.
+          # Reset hiccup count and retry the same stream immediately.
+          echo "Stream ran for ${elapsed}s before disconnecting. Retrying same stream: $current_url" >&2
+          hiccup_count=0
+        else
+          hiccup_count=$((hiccup_count + 1))
+          echo "Stream dropped quickly (${elapsed}s < ${MIN_PLAY_SECONDS}s). Hiccup count: $hiccup_count/$MAX_HICCUP_RETRIES" >&2
+        fi
+
+        sleep 2
+      done
+
+      echo "Stream $current_url failed $MAX_HICCUP_RETRIES times consecutively. Falling back to next stream in chain..." >&2
+    done <<EOF
+$streams
+EOF
+
+    echo "All streams exhausted in fallback chain. Restarting chain from top..." >&2
+    sleep 3
+  done
+}
+
+play_stream_with_resilience
