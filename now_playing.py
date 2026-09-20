@@ -211,6 +211,8 @@ def watch(interval):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="WFMU now-playing metadata")
+    parser.add_argument("--once", action="store_true",
+                        help="print current metadata once (default)")
     parser.add_argument("--watch", action="store_true",
                         help="poll every %d s, print only on change" % INTERVAL_SECONDS)
     parser.add_argument("--interval", type=int, default=INTERVAL_SECONDS,
