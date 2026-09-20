@@ -152,8 +152,8 @@ def _strip_tags(s):
     return html.unescape(re.sub(r"<[^>]+>", " ", s)).strip()
 
 
-def _fetch_show_dj(code, timeout=6):
-    """Return (dj, show) for a station from the radiorethink schedule endpoint."""
+def _fetch_show_meta(code, timeout=6):
+    """Return (dj, show, desc, sched) for a station from radiorethink."""
     req = urllib.request.Request(
         SCHEDULE_URL.format(code), headers={"User-Agent": "Mozilla/5.0"})
     text = urllib.request.urlopen(req, timeout=timeout).read().decode("utf-8", "replace")
@@ -163,7 +163,13 @@ def _fetch_show_dj(code, timeout=6):
     show = _strip_tags(sm.group(1)) if sm else ""
     dm = _WITH_RE.search(block)
     dj = _strip_tags(dm.group(1)) if dm else ""
-    return dj, show
+    parts = [p for p in (_strip_tags(x) for x in re.split(r"<br\s*/?>", block)) if p]
+    desc = parts[1] if len(parts) >= 2 else ""
+    sched = ""
+    if len(parts) >= 3:
+        tm = re.search(r"\(([^)]*ET[^)]*)\)", parts[2])
+        sched = (tm.group(1) if tm else parts[2]).strip()
+    return dj, show, desc, sched
 
 
 def _compose_show(dj, show):
@@ -176,8 +182,9 @@ def _compose_show(dj, show):
 def _stream_info(stream_url):
     mount = _mount_of(stream_url)
     name, upstream, code = STREAMS.get(mount, (mount, None, None))
-    info = {"source": "stream", "stream": name,
-            "show": DASH, "artist": DASH, "album": DASH, "song": DASH}
+    info = {"source": "stream", "stream": name, "show": DASH,
+            "desc": DASH, "sched": DASH,
+            "artist": DASH, "album": DASH, "song": DASH}
     if upstream:
         try:
             artist, icy_show, song = _parse_title(_read_icy_streamtitle(upstream))
@@ -187,17 +194,23 @@ def _stream_info(stream_url):
             pass
     if code:
         try:
-            composed = _compose_show(*_fetch_show_dj(code))
+            dj, show, desc, sched = _fetch_show_meta(code)
+            composed = _compose_show(dj, show)
             if composed != DASH:
                 info["show"] = composed
+            if desc:
+                info["desc"] = desc
+            if sched:
+                info["sched"] = sched
         except Exception:
             pass
     return info
 
 
 def _spotify_info():
-    info = {"source": "spotify", "stream": "Spotify (WFMU Pi)",
-            "show": DASH, "artist": DASH, "album": DASH, "song": DASH}
+    info = {"source": "spotify", "stream": "Spotify (WFMU Pi)", "show": DASH,
+            "desc": DASH, "sched": DASH,
+            "artist": DASH, "album": DASH, "song": DASH}
     try:
         with open(SPOTIFY_STATE) as f:
             data = json.load(f)
@@ -215,21 +228,20 @@ def current_info():
     return _stream_info(_current_stream_url())
 
 
-def _signature(info):
+def _show_signature(info):
     return "|".join(info.get(k, "") for k in
-                    ("source", "stream", "show", "artist", "album", "song"))
+                    ("source", "stream", "show", "desc", "sched"))
 
 
-def format_info(info):
-    show = info.get("show", DASH)
+def _track_signature(info):
+    return "|".join(info.get(k, "") for k in ("artist", "album", "song"))
+
+
+def _track_lines(info):
     artist = info.get("artist", DASH)
     album = info.get("album", DASH)
     song = info.get("song", DASH)
-
     lines = []
-    if show and show != DASH:
-        lines.append("*{}*".format(show))
-    lines.append("NOW PLAYING:")
     if artist and artist != DASH:
         lines.append('"{}" by {}'.format(song, artist))
     elif song and song != DASH:
@@ -238,17 +250,48 @@ def format_info(info):
         lines.append("(no track info)")
     if album and album != DASH:
         lines.append("Album: {}".format(album))
+    return lines
+
+
+def format_full(info):
+    """Show header + description + schedule time, then the track."""
+    lines = []
+    show = info.get("show", DASH)
+    if show and show != DASH:
+        lines.append("*{}*".format(show))
+    desc = info.get("desc", DASH)
+    if desc and desc != DASH:
+        lines.append(desc)
+    sched = info.get("sched", DASH)
+    if sched and sched != DASH:
+        lines.append("({})".format(sched.strip("()").strip()))
+    lines.append("NOW PLAYING:")
+    lines.extend(_track_lines(info))
     return "\n".join(lines)
 
 
+def format_track(info):
+    """Only the track (used when the song/album changes but the show did not)."""
+    return "\n".join(["NOW PLAYING:"] + _track_lines(info))
+
+
+# format_info stays as the full view for --once and print-on-switch callers.
+format_info = format_full
+
+
 def watch(interval):
-    last = None
+    last_show = None
+    last_track = None
     while True:
         info = current_info()
-        sig = _signature(info)
-        if sig != last:
-            print(format_info(info), flush=True)
-            last = sig
+        show_sig = _show_signature(info)
+        track_sig = _track_signature(info)
+        if show_sig != last_show:
+            print(format_full(info), flush=True)
+            last_show, last_track = show_sig, track_sig
+        elif track_sig != last_track:
+            print(format_track(info), flush=True)
+            last_track = track_sig
         time.sleep(interval)
 
 
