@@ -194,6 +194,11 @@ If Spotify service fails, switching logic falls back to key `1`.
 sudo systemctl restart si4713.service`. The login banner reads the frequency back
 from this unit, so it stays in sync automatically.
 
+> **Field note (2026-09-20):** 95.0 MHz is clear on the local dial. Running a
+> temporary test at 95.0 to see whether moving off 91.1 reduces a high-pitch
+> whine heard in the transmission. Default remains 91.1 in this repo; the live
+> device unit is the source of truth for the frequency actually in use.
+
 Check status any time:
 ```bash
 ./wfmu-status.sh
