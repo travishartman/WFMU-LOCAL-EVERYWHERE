@@ -15,6 +15,17 @@ if [[ "${EUID}" -ne 0 ]]; then
   exec sudo "$0" "$@"
 fi
 
+# Background now-playing watcher: prints track metadata on load and whenever it
+# changes (polls every 30s). Runs only for the life of this listener.
+NOWPLAYING="$(command -v wfmu-nowplaying || true)"
+NP_PID=""
+if [[ -n "$NOWPLAYING" ]]; then
+  "$NOWPLAYING" --watch &
+  NP_PID=$!
+  # shellcheck disable=SC2064
+  trap "kill $NP_PID 2>/dev/null || true" EXIT
+fi
+
 cat <<'EOF'
 Terminal hotkeys enabled (this window only):
   1 = WFMU live
@@ -25,6 +36,7 @@ Terminal hotkeys enabled (this window only):
 
 Extra keys:
   s = show status
+  n = show now playing
   q = quit
 EOF
 
@@ -34,12 +46,17 @@ while true; do
     1|2|3|4|5)
       echo
       "$SWITCHER" "$key" || true
-      echo "Press 1-5, s, or q..."
+      echo "Press 1-5, n, s, or q..."
+      ;;
+    n|N)
+      echo
+      [[ -n "$NOWPLAYING" ]] && "$NOWPLAYING" --once || echo "now-playing helper not installed"
+      echo "Press 1-5, n, s, or q..."
       ;;
     s|S)
       echo
       "$SWITCHER" status || true
-      echo "Press 1-5, s, or q..."
+      echo "Press 1-5, n, s, or q..."
       ;;
     q|Q)
       echo

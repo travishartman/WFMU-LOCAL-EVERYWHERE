@@ -57,6 +57,13 @@ STREAM_URL=$stream_url
 EOF
 }
 
+# Print current track metadata once (best-effort; never fails the switch).
+print_now_playing() {
+  local np
+  np="$(command -v wfmu-nowplaying || true)"
+  [[ -n "$np" ]] && "$np" --once 2>/dev/null || true
+}
+
 preflight_local_mount() {
   local stream_url="$1"
   if [[ "$stream_url" == http://localhost:* || "$stream_url" == http://127.0.0.1:* ]]; then
@@ -96,6 +103,7 @@ switch_to_stream() {
 
   echo "Active stream URL: $stream_url"
   echo "Done: $label"
+  print_now_playing
 }
 
 switch_to_spotify() {
@@ -111,6 +119,7 @@ switch_to_spotify() {
   fi
 
   echo "Done: Spotify (connect from Spotify app to device name in librespot config)"
+  print_now_playing
 }
 
 show_status() {

@@ -32,6 +32,8 @@ echo "Installing helper scripts ..."
 sudo install -m 0755 "$HERE/switch_source.sh" /usr/local/bin/wfmu-switch-source
 sudo install -m 0755 "$HERE/radio_hotkeys.sh" /usr/local/bin/wfmu-radio-hotkeys
 sudo install -m 0755 "$HERE/start_librespot.sh" /usr/local/bin/wfmu-start-librespot
+sudo install -m 0755 "$HERE/now_playing.py" /usr/local/bin/wfmu-nowplaying
+sudo install -m 0755 "$HERE/librespot_event.sh" /usr/local/bin/wfmu-librespot-event
 
 # Short global commands: wfmu1..wfmu5 -> wfmu-switch-source 1..5
 echo "Installing wfmu1..wfmu5 shortcut commands ..."

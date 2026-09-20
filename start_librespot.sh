@@ -35,6 +35,18 @@ initial_volume="${LIBRESPOT_INITIAL_VOLUME:-100}"
 cache="${LIBRESPOT_CACHE:-$HOME/.cache/librespot}"
 mkdir -p "$cache"
 
+# Optional: an --onevent hook that records track metadata (artist/album/song)
+# for now_playing.py. Only wired in if the hook program is present and librespot
+# actually supports --onevent (older/renamed builds may not).
+onevent_args=()
+event_hook="$(command -v wfmu-librespot-event || true)"
+if [[ -n "$event_hook" ]] && librespot --help 2>&1 | grep -q -- '--onevent'; then
+  onevent_args=(--onevent "$event_hook")
+  echo "librespot: metadata hook enabled ($event_hook)" >&2
+else
+  echo "librespot: --onevent metadata hook not available; Spotify track info will show '-'" >&2
+fi
+
 exec librespot \
   --name "$name" \
   --backend alsa \
@@ -42,4 +54,5 @@ exec librespot \
   --bitrate "$bitrate" \
   --initial-volume "$initial_volume" \
   --cache "$cache" \
-  --disable-audio-cache
+  --disable-audio-cache \
+  "${onevent_args[@]}"
