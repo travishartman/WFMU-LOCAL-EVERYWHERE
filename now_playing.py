@@ -21,6 +21,7 @@ does not expose are shown as "-".
 """
 
 import argparse
+import html
 import json
 import re
 import subprocess
@@ -34,13 +35,22 @@ SPOTIFY_STATE = "/run/wfmu/nowplaying.json"
 INTERVAL_SECONDS = 30
 DASH = "-"
 
-# Local relay mount filename -> (human name, WFMU upstream URL for metadata).
+# Local relay mount filename -> (human name, WFMU upstream URL, radiorethink code).
+# The radiorethink station code drives the show/DJ lookup that WFMU's popup
+# player uses (station codes discovered from the WFMU site).
 STREAMS = {
-    "wfmu.mp3": ("WFMU Live", "http://stream0.wfmu.org/freeform-128k"),
-    "drummer.mp3": ("Give the Drummer Radio", "http://stream0.wfmu.org/drummer"),
-    "rocknsoul.mp3": ("Rock'n'Soul Radio", "http://stream0.wfmu.org/rocknsoul"),
-    "sheena.mp3": ("Sheena's Jungle Room Radio", "http://stream0.wfmu.org/sheena"),
+    "wfmu.mp3": ("WFMU Live", "http://stream0.wfmu.org/freeform-128k", "wfmu"),
+    "drummer.mp3": ("Give the Drummer Radio", "http://stream0.wfmu.org/drummer", "wfmugtd"),
+    "rocknsoul.mp3": ("Rock'n'Soul Radio", "http://stream0.wfmu.org/rocknsoul", "wfmurnsi"),
+    "sheena.mp3": ("Sheena's Jungle Room Radio", "http://stream0.wfmu.org/sheena", "wfmusjr"),
 }
+
+# radiorethink schedule endpoint that the WFMU popup player reads for show/DJ.
+SCHEDULE_URL = ("https://www.radiorethink.com/tuner/queries/"
+                "getScheduleDataOutput.cfm?stationCode={}&testTime=0&randval=1")
+_H6_RE = re.compile(r"<h6>(.*?)</h6>", re.S)
+_STRONG_RE = re.compile(r"<strong>(.*?)</strong>", re.S)
+_WITH_RE = re.compile(r"with(.*?)<br>", re.S)
 
 # '"Song" by Artist on Show on WFMU'  (trailing ' on WFMU' is stripped first)
 _FREEFORM_RE = re.compile(r'^"(?P<song>.*)" by (?P<artist>.*?) on (?P<show>.*)$')
@@ -138,15 +148,48 @@ def _parse_title(title):
     return DASH, DASH, title
 
 
+def _strip_tags(s):
+    return html.unescape(re.sub(r"<[^>]+>", " ", s)).strip()
+
+
+def _fetch_show_dj(code, timeout=6):
+    """Return (dj, show) for a station from the radiorethink schedule endpoint."""
+    req = urllib.request.Request(
+        SCHEDULE_URL.format(code), headers={"User-Agent": "Mozilla/5.0"})
+    text = urllib.request.urlopen(req, timeout=timeout).read().decode("utf-8", "replace")
+    m = _H6_RE.search(text)
+    block = m.group(1) if m else ""
+    sm = _STRONG_RE.search(block)
+    show = _strip_tags(sm.group(1)) if sm else ""
+    dm = _WITH_RE.search(block)
+    dj = _strip_tags(dm.group(1)) if dm else ""
+    return dj, show
+
+
+def _compose_show(dj, show):
+    """Format the show line as '<DJ> on <SHOW>', degrading if a part is missing."""
+    if dj and show:
+        return "{} on {}".format(dj, show)
+    return show or dj or DASH
+
+
 def _stream_info(stream_url):
     mount = _mount_of(stream_url)
-    name, upstream = STREAMS.get(mount, (mount, None))
+    name, upstream, code = STREAMS.get(mount, (mount, None, None))
     info = {"source": "stream", "stream": name,
             "show": DASH, "artist": DASH, "album": DASH, "song": DASH}
     if upstream:
         try:
-            artist, show, song = _parse_title(_read_icy_streamtitle(upstream))
-            info["artist"], info["show"], info["song"] = artist, show, song
+            artist, icy_show, song = _parse_title(_read_icy_streamtitle(upstream))
+            info["artist"], info["song"] = artist, song
+            info["show"] = icy_show          # fallback if radiorethink is unreachable
+        except Exception:
+            pass
+    if code:
+        try:
+            composed = _compose_show(*_fetch_show_dj(code))
+            if composed != DASH:
+                info["show"] = composed
         except Exception:
             pass
     return info
