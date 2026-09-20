@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Terminal-only source control. Keys only work while this script is running
-# in the focused terminal/SSH session.
+# WFMU login/console control. Shows the banner + now-playing, then reads single
+# keys 1-5 to switch streams (q to quit). Runs as the normal user; the switch
+# helper self-elevates via sudo (see the NOPASSWD sudoers rule installed by
+# install_autostart.sh), so no password prompt interrupts the hotkeys.
 
 SWITCHER="$(command -v wfmu-switch-source || true)"
 
@@ -11,9 +13,9 @@ if [[ -z "$SWITCHER" ]]; then
   exit 1
 fi
 
-if [[ "${EUID}" -ne 0 ]]; then
-  exec sudo "$0" "$@"
-fi
+# Show the WFMU banner (dog & cow logo + on-air status) once at the top.
+STATUS="$(command -v wfmu-status || true)"
+[[ -n "$STATUS" ]] && "$STATUS" || true
 
 # Background now-playing watcher: prints track metadata on load and whenever it
 # changes (polls every 30s). Runs only for the life of this listener.
@@ -27,17 +29,14 @@ if [[ -n "$NOWPLAYING" ]]; then
 fi
 
 cat <<'EOF'
-Terminal hotkeys enabled (this window only):
+
+WFMU hotkeys — press a key (this window only):
   1 = WFMU live
   2 = Give the Drummer Radio
   3 = Rock'n'Soul Radio
   4 = Sheena's Jungle Room Radio
   5 = Spotify
-
-Extra keys:
-  s = show status
-  n = show now playing
-  q = quit
+  n = show now playing    s = show status    q = quit
 EOF
 
 while true; do
@@ -55,12 +54,12 @@ while true; do
       ;;
     s|S)
       echo
-      "$SWITCHER" status || true
+      [[ -n "$STATUS" ]] && "$STATUS" || true
       echo "Press 1-5, n, s, or q..."
       ;;
     q|Q)
       echo
-      echo "Exiting terminal hotkeys."
+      echo "Exiting WFMU hotkeys."
       exit 0
       ;;
     *)

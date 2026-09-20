@@ -17,16 +17,21 @@ if [ -r "$UNIT" ]; then
   [ -n "${2:-}" ] && station="$2"
 fi
 
-tx="$(systemctl is-active si4713.service 2>/dev/null || echo unknown)"
-au="$(systemctl is-active wfmu-audio.service 2>/dev/null || echo unknown)"
-sp="$(systemctl is-active librespot-wfmu.service 2>/dev/null || echo unknown)"
+# systemctl is-active prints the state (active/activating/inactive/failed) to
+# stdout but returns non-zero for non-active states, so capture stdout and only
+# fall back to "unknown" when it prints nothing.
+tx="$(systemctl is-active si4713.service 2>/dev/null || true)"; [ -z "$tx" ] && tx=unknown
+au="$(systemctl is-active wfmu-audio.service 2>/dev/null || true)"; [ -z "$au" ] && au=unknown
+sp="$(systemctl is-active librespot-wfmu.service 2>/dev/null || true)"; [ -z "$sp" ] && sp=unknown
 stream_url="$(sed -n 's/^STREAM_URL=//p' /etc/default/wfmu-audio 2>/dev/null || true)"
 [ -z "${stream_url:-}" ] && stream_url="http://localhost:8000/wfmu.mp3"
 
-# Only draw the art if the window is wide enough (it's ~85 cols); otherwise it
-# wraps and looks sheared, so suppress it and just show the status line.
-cols="$(tput cols 2>/dev/null || echo 80)"
-if [ "$cols" -ge 85 ] 2>/dev/null; then
+# Draw the WFMU "Woof Moo" dog & cow logo unless the terminal is clearly narrow.
+# tput can fail when TERM is unset (e.g. the Raspberry Pi Connect browser shell),
+# so fall back to $COLUMNS and, failing that, assume wide enough to show the art.
+cols="$(tput cols 2>/dev/null || true)"
+[ -z "$cols" ] && cols="${COLUMNS:-100}"
+if [ "$cols" -ge 80 ] 2>/dev/null; then
   # Quoted heredoc: print the WFMU art verbatim, no shell expansion of * @ etc.
   cat <<'ART'
             **********************************= :***********************************                    

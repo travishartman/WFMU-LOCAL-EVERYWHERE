@@ -34,6 +34,20 @@ sudo install -m 0755 "$HERE/radio_hotkeys.sh" /usr/local/bin/wfmu-radio-hotkeys
 sudo install -m 0755 "$HERE/start_librespot.sh" /usr/local/bin/wfmu-start-librespot
 sudo install -m 0755 "$HERE/now_playing.py" /usr/local/bin/wfmu-nowplaying
 sudo install -m 0755 "$HERE/librespot_event.sh" /usr/local/bin/wfmu-librespot-event
+sudo install -m 0755 "$HERE/wfmu-status.sh" /usr/local/bin/wfmu-status
+
+# Passwordless sudo for the switch helper so the login hotkeys can change streams
+# without a password prompt interrupting the key loop.
+echo "Installing sudoers rule for passwordless stream switching ..."
+TARGET_USER="${SUDO_USER:-$(id -un)}"
+sudo tee /etc/sudoers.d/wfmu-switch >/dev/null <<EOF
+$TARGET_USER ALL=(root) NOPASSWD: /usr/local/bin/wfmu-switch-source
+EOF
+sudo chmod 0440 /etc/sudoers.d/wfmu-switch
+if ! sudo visudo -cf /etc/sudoers.d/wfmu-switch >/dev/null 2>&1; then
+  echo "WARNING: sudoers syntax check failed; removing the rule." >&2
+  sudo rm -f /etc/sudoers.d/wfmu-switch
+fi
 
 # Short global commands: wfmu1..wfmu5 -> wfmu-switch-source 1..5
 echo "Installing wfmu1..wfmu5 shortcut commands ..."
@@ -70,55 +84,57 @@ if command -v alsactl >/dev/null 2>&1; then
   sudo alsactl store || true
 fi
 
-# Login banner: print on-air status on every SSH login.
-# Two delivery paths for robustness:
-#   1. dynamic MOTD (/etc/update-motd.d) — works on images with pam_motd wired up
-#   2. ~/.bashrc source line — the reliable fallback on Raspberry Pi OS Lite, whose
-#      login PAM stack often shows only the static /etc/motd and never runs update-motd.d
-# Run via `sh` so it works even if wfmu-status.sh lost its executable bit.
-echo "Installing login status banner ..."
-chmod +x "$HERE/wfmu-status.sh" 2>/dev/null || true
-sudo tee /etc/update-motd.d/99-wfmu >/dev/null <<EOF
-#!/bin/sh
-exec sh "$HERE/wfmu-status.sh"
-EOF
-sudo chmod +x /etc/update-motd.d/99-wfmu
+# Login experience: drop interactive logins straight into the WFMU hotkey
+# environment, which shows the banner (dog & cow logo + on-air status), the
+# current now-playing (updating every 30s), and reads keys 1-5 to switch streams
+# (q to quit to a normal shell). Set WFMU_NO_HOTKEYS=1 to bypass.
+#
+# The old MOTD/banner-only path is removed so the banner isn't printed twice.
+echo "Installing login hotkey environment ..."
+sudo rm -f /etc/update-motd.d/99-wfmu
 
-BASHRC="$HOME/.bashrc"
-MARKER="# >>> wfmu status banner >>>"
+TARGET_USER="${SUDO_USER:-$(id -un)}"
+TARGET_HOME="$(eval echo "~$TARGET_USER")"
+BASHRC="$TARGET_HOME/.bashrc"
+
+# Remove the previous banner-only snippet if present (migration).
+if [ -f "$BASHRC" ] && grep -qF "# >>> wfmu status banner >>>" "$BASHRC"; then
+  sudo sed -i '/# >>> wfmu status banner >>>/,/# <<< wfmu status banner <<</d' "$BASHRC"
+fi
+
+MARKER="# >>> wfmu hotkeys >>>"
 if ! grep -qF "$MARKER" "$BASHRC" 2>/dev/null; then
-  {
-    echo ""
-    echo "$MARKER"
-    echo "case \$- in *i*) sh \"$HERE/wfmu-status.sh\" ;; esac"
-    echo "# <<< wfmu status banner <<<"
-  } >>"$BASHRC"
-  echo "Added on-air banner to $BASHRC (shows on every interactive login)."
+  sudo tee -a "$BASHRC" >/dev/null <<'EOF'
+
+# >>> wfmu hotkeys >>>
+# Launch the WFMU hotkey environment on interactive login (q to quit to a shell).
+case $- in
+  *i*)
+    if [ -t 0 ] && [ -t 1 ] && [ -z "${WFMU_NO_HOTKEYS:-}" ] && command -v wfmu-radio-hotkeys >/dev/null 2>&1; then
+      wfmu-radio-hotkeys
+    fi
+    ;;
+esac
+# <<< wfmu hotkeys <<<
+EOF
+  sudo chown "$TARGET_USER":"$TARGET_USER" "$BASHRC" 2>/dev/null || true
+  echo "Added hotkey auto-launch to $BASHRC."
 else
-  echo "On-air banner already present in $BASHRC."
+  echo "Hotkey auto-launch already present in $BASHRC."
 fi
 
 cat <<'EOF'
 
-Done. The radio will come up on 91.1 MHz automatically after every reboot.
-Every time you SSH in, a banner shows whether it's ON AIR.
+Done. The radio comes up on 91.1 MHz automatically after every reboot, and
+interactive logins drop into the WFMU hotkey environment:
+  banner (dog & cow logo + on-air status)
+  now playing (updates every 30s)
+  keys: 1=live 2=drummer 3=rocknsoul 4=sheena 5=spotify | n=now playing s=status q=quit
 
-Terminal-only hotkeys (active only while running in that SSH terminal):
-  sudo wfmu-radio-hotkeys
-  # 1=live, 2=drummer, 3=rocknsoul, 4=sheena, 5=spotify, q=quit
+Bypass the hotkeys for one session with:  WFMU_NO_HOTKEYS=1 bash
 
-Quick channel commands (run from anywhere):
-  wfmu1  # WFMU live
-  wfmu2  # Give the Drummer
-  wfmu3  # Rock'n'Soul
-  wfmu4  # Sheena's Jungle Room
-  wfmu5  # Spotify
-
-Start now without rebooting:
-  sudo systemctl start si4713.service wfmu-audio.service
-
-See status any time:
-  ./wfmu-status.sh
-  systemctl status si4713.service wfmu-audio.service
-  journalctl -u si4713.service -u wfmu-audio.service -b
+Run the pieces by hand any time:
+  wfmu-status         # banner only
+  wfmu-nowplaying     # current track once
+  wfmu-radio-hotkeys  # the full hotkey environment
 EOF
